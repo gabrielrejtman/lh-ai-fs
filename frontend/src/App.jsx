@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 function App() {
   const [report, setReport] = useState(null)
@@ -54,16 +56,92 @@ function App() {
       {report && (
         <div style={{ marginTop: '20px' }}>
           <h2>Report</h2>
-          <pre style={{
-            background: '#f5f5f5',
-            padding: '20px',
-            borderRadius: '4px',
-            overflow: 'auto',
-            whiteSpace: 'pre-wrap',
-            wordWrap: 'break-word',
-          }}>
-            {typeof report === 'string' ? report : JSON.stringify(report, null, 2)}
-          </pre>
+
+          {report.summary && (
+            <div style={{ marginBottom: '24px', lineHeight: 1.7 }}>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{report.summary}</ReactMarkdown>
+            </div>
+          )}
+
+          {report.citations?.length > 0 && (
+            <div style={{ marginBottom: '24px' }}>
+              <h3>Citation Findings</h3>
+              <div style={{ display: 'grid', gap: '14px' }}>
+                {report.citations.map((citation, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      border: '1px solid #ddd',
+                      borderRadius: '10px',
+                      padding: '16px',
+                      background: '#fff',
+                    }}
+                  >
+                    <div style={{ fontWeight: '600', marginBottom: '8px' }}>
+                      {citation.citation}
+                    </div>
+                    <div style={{ color: '#555', marginBottom: '8px' }}>
+                      <strong>Status:</strong> {citation.status}
+                      {' • '}
+                      <strong>Confidence:</strong> {Math.round(citation.confidence * 100)}%
+                    </div>
+                    <div style={{ color: '#333', marginBottom: '8px' }}>
+                      {citation.reason}
+                    </div>
+                    {citation.evidence && (
+                      <div style={{ background: '#f7f7f7', padding: '10px', borderRadius: '8px', color: '#333' }}>
+                        <strong>Evidence:</strong>
+                        <div style={{ whiteSpace: 'pre-wrap', marginTop: '6px' }}>{citation.evidence}</div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {report.cross_document_findings?.length > 0 && (
+            <div style={{ marginBottom: '24px' }}>
+              <h3>Cross-Document Findings</h3>
+              <div style={{ display: 'grid', gap: '14px' }}>
+                {report.cross_document_findings.map((finding, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      border: '1px solid #ddd',
+                      borderRadius: '10px',
+                      padding: '16px',
+                      background: '#fff',
+                    }}
+                  >
+                    <div style={{ fontWeight: '600', marginBottom: '8px' }}>{finding.summary}</div>
+                    <div style={{ color: '#555', marginBottom: '8px' }}>
+                      <strong>Severity:</strong> {finding.severity}
+                    </div>
+                    {finding.evidence && (
+                      <div style={{ background: '#f7f7f7', padding: '10px', borderRadius: '8px' }}>
+                        <strong>Evidence:</strong>
+                        <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{JSON.stringify(finding.evidence, null, 2)}</pre>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!report.summary && !report.citations?.length && !report.cross_document_findings?.length && (
+            <pre style={{
+              background: '#f5f5f5',
+              padding: '20px',
+              borderRadius: '4px',
+              overflow: 'auto',
+              whiteSpace: 'pre-wrap',
+              wordWrap: 'break-word',
+            }}>
+              {JSON.stringify(report, null, 2)}
+            </pre>
+          )}
         </div>
       )}
 

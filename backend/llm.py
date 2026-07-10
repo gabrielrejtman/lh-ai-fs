@@ -12,7 +12,6 @@ def call_llm(
     model: str = "gpt-4o",
     temperature: float = 0,
 ) -> str:
-    """Call the OpenAI API and return the response content."""
     response = client.chat.completions.create(
         model=model,
         messages=messages,
