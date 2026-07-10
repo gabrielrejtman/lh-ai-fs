@@ -157,3 +157,13 @@ BS Detector should evolve from the current prototype by hardening workflow orche
 
 The first production-ready MVP is a job-driven pipeline with durable document and audit storage, tenant-aware APIs, explicit failure handling, and objective quality metrics. That keeps the current architecture intact while making it safe enough for legal teams to rely on.
 
+### Evaluation
+
+Run the evaluation suite from the repository root:
+
+```bash
+python run_evals.py
+```
+
+The eval harness reports precision, recall, and hallucination rate for citations, quotes, and cross-document findings. The current prototype is intentionally conservative about quote extraction and may report lower quote precision than a cherry-picked demo, but it surfaces the tradeoff clearly rather than hiding it.
+

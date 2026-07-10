@@ -1,6 +1,4 @@
 import { useState } from 'react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 
 function App() {
   const [report, setReport] = useState(null)
@@ -22,13 +20,18 @@ function App() {
       }
 
       const data = await response.json()
-      setReport(data.report)
+      console.log("Dados recebidos do backend:", data) // Ajuda a debugar no F12
+      setReport(data.report || data) // Garante que pega o report mesmo se a estrutura do json mudar ligeiramente
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
   }
+
+  // Funções de segurança para garantir que não tentamos dar .map em algo que não é array
+  const citations = Array.isArray(report?.citations) ? report.citations : []
+  const findings = Array.isArray(report?.cross_document_findings) ? report.cross_document_findings : []
 
   return (
     <div style={{ maxWidth: '800px', margin: '40px auto', padding: '0 20px', fontFamily: 'system-ui, sans-serif' }}>
@@ -42,32 +45,61 @@ function App() {
           padding: '10px 24px',
           fontSize: '16px',
           cursor: loading ? 'not-allowed' : 'pointer',
+          backgroundColor: '#0066cc',
+          color: 'white',
+          border: 'none',
+          borderRadius: '5px'
         }}
       >
         {loading ? 'Analyzing...' : 'Run Analysis'}
       </button>
 
       {error && (
-        <div style={{ marginTop: '20px', color: 'red' }}>
+        <div style={{ marginTop: '20px', color: 'red', background: '#ffebee', padding: '15px', borderRadius: '8px' }}>
           <strong>Error:</strong> {error}
         </div>
       )}
 
       {report && (
-        <div style={{ marginTop: '20px' }}>
+        <div style={{ marginTop: '30px' }}>
           <h2>Report</h2>
 
-          {report.summary && (
-            <div style={{ marginBottom: '24px', lineHeight: 1.7 }}>
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{report.summary}</ReactMarkdown>
+          {/* Renderização Segura do Summary (Pydantic) */}
+          {report.summary?.executive_summary && (
+            <div style={{ marginBottom: '30px', background: '#f8f9fa', padding: '20px', borderRadius: '10px', borderLeft: '4px solid #0066cc' }}>
+              <h3 style={{ marginTop: 0, color: '#0066cc' }}>Executive Summary</h3>
+              <p style={{ fontSize: '16px', lineHeight: 1.6 }}>
+                {report.summary.executive_summary}
+              </p>
+              
+              <div style={{ display: 'flex', gap: '20px', marginTop: '16px' }}>
+                <div style={{ background: '#ffebee', padding: '10px 15px', borderRadius: '8px', color: '#c62828', fontWeight: 'bold' }}>
+                  Critical Flaws: {report.summary.critical_flaws_count || 0}
+                </div>
+                <div style={{ background: '#fff3e0', padding: '10px 15px', borderRadius: '8px', color: '#ef6c00', fontWeight: 'bold' }}>
+                  Unverified Claims: {report.summary.unverified_claims_count || 0}
+                </div>
+              </div>
+
+              {Array.isArray(report.summary.key_warnings) && report.summary.key_warnings.length > 0 && (
+                <div style={{ marginTop: '16px' }}>
+                  <strong>Key Warnings:</strong>
+                  <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
+                    {report.summary.key_warnings.map((warning, idx) => (
+                      <li key={idx} style={{ marginBottom: '4px' }}>{warning}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
 
-          {report.citations?.length > 0 && (
-            <div style={{ marginBottom: '24px' }}>
+          {/* Renderização Segura das Citations */}
+          {citations.length > 0 && (
+            <div style={{ marginBottom: '30px' }}>
               <h3>Citation Findings</h3>
               <div style={{ display: 'grid', gap: '14px' }}>
-                {report.citations.map((citation, index) => (
+                {citations.map((citation, index) => (
                   <div
                     key={index}
                     style={{
@@ -81,15 +113,15 @@ function App() {
                       {citation.citation}
                     </div>
                     <div style={{ color: '#555', marginBottom: '8px' }}>
-                      <strong>Status:</strong> {citation.status}
+                      <strong>Status:</strong> <span style={{ color: citation.status === 'contradicted' ? 'red' : 'inherit' }}>{citation.status}</span>
                       {' • '}
-                      <strong>Confidence:</strong> {Math.round(citation.confidence * 100)}%
+                      <strong>Confidence:</strong> {citation.confidence}
                     </div>
                     <div style={{ color: '#333', marginBottom: '8px' }}>
                       {citation.reason}
                     </div>
                     {citation.evidence && (
-                      <div style={{ background: '#f7f7f7', padding: '10px', borderRadius: '8px', color: '#333' }}>
+                      <div style={{ background: '#f7f7f7', padding: '10px', borderRadius: '8px', color: '#333', fontSize: '0.9em' }}>
                         <strong>Evidence:</strong>
                         <div style={{ whiteSpace: 'pre-wrap', marginTop: '6px' }}>{citation.evidence}</div>
                       </div>
@@ -100,11 +132,12 @@ function App() {
             </div>
           )}
 
-          {report.cross_document_findings?.length > 0 && (
-            <div style={{ marginBottom: '24px' }}>
+          {/* Renderização Segura das Cross-Document Findings */}
+          {findings.length > 0 && (
+            <div style={{ marginBottom: '30px' }}>
               <h3>Cross-Document Findings</h3>
               <div style={{ display: 'grid', gap: '14px' }}>
-                {report.cross_document_findings.map((finding, index) => (
+                {findings.map((finding, index) => (
                   <div
                     key={index}
                     style={{
@@ -112,16 +145,20 @@ function App() {
                       borderRadius: '10px',
                       padding: '16px',
                       background: '#fff',
+                      borderLeft: finding.severity === 'critical' ? '4px solid #c62828' : '1px solid #ddd'
                     }}
                   >
-                    <div style={{ fontWeight: '600', marginBottom: '8px' }}>{finding.summary}</div>
-                    <div style={{ color: '#555', marginBottom: '8px' }}>
+                    <div style={{ fontWeight: '600', marginBottom: '8px', color: '#c62828' }}>{finding.issue || 'Finding'}</div>
+                    <div style={{ fontWeight: '500', marginBottom: '8px' }}>{finding.summary}</div>
+                    <div style={{ color: '#555', marginBottom: '8px', fontSize: '0.9em' }}>
                       <strong>Severity:</strong> {finding.severity}
                     </div>
                     {finding.evidence && (
-                      <div style={{ background: '#f7f7f7', padding: '10px', borderRadius: '8px' }}>
+                      <div style={{ background: '#f7f7f7', padding: '10px', borderRadius: '8px', fontSize: '0.9em' }}>
                         <strong>Evidence:</strong>
-                        <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{JSON.stringify(finding.evidence, null, 2)}</pre>
+                        <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'inherit', marginTop: '6px' }}>
+                          {typeof finding.evidence === 'string' ? finding.evidence : JSON.stringify(finding.evidence, null, 2)}
+                        </pre>
                       </div>
                     )}
                   </div>
@@ -130,7 +167,8 @@ function App() {
             </div>
           )}
 
-          {!report.summary && !report.citations?.length && !report.cross_document_findings?.length && (
+          {/* Fallback caso não venha nada estruturado */}
+          {!report.summary?.executive_summary && citations.length === 0 && findings.length === 0 && (
             <pre style={{
               background: '#f5f5f5',
               padding: '20px',
@@ -143,12 +181,6 @@ function App() {
             </pre>
           )}
         </div>
-      )}
-
-      {report === null && !loading && !error && (
-        <p style={{ marginTop: '20px', color: '#888' }}>
-          Click "Run Analysis" to analyze the case documents.
-        </p>
       )}
     </div>
   )
